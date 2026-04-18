@@ -1,17 +1,40 @@
-export function exportPdf(pageEl, { pageWidth, markdown }) {
+export interface ExportPdfOptions {
+  pageWidth: number;
+  markdown: string;
+}
+
+interface HiddenElement {
+  el: HTMLElement;
+  prev: string;
+}
+
+interface AncestorSaved {
+  el: HTMLElement;
+  overflow: string;
+  transform: string;
+  position: string;
+  visibility: string;
+  background: string;
+}
+
+export function exportPdf(
+  pageEl: HTMLElement | null,
+  {pageWidth, markdown}: ExportPdfOptions,
+): void {
   if (!pageEl) return;
 
-  const hiddenElements = [];
-  const ancestorSaved = [];
-  let current = pageEl;
+  const hiddenElements: HiddenElement[] = [];
+  const ancestorSaved: AncestorSaved[] = [];
+  let current: HTMLElement = pageEl;
   while (current.parentElement) {
     const parent = current.parentElement;
-    Array.from(parent.children).forEach((sibling) => {
+    for (const child of Array.from(parent.children)) {
+      const sibling = child as HTMLElement;
       if (sibling !== current) {
-        hiddenElements.push({ el: sibling, prev: sibling.style.display });
-        sibling.style.display = "none";
+        hiddenElements.push({el: sibling, prev: sibling.style.display});
+        sibling.style.display = 'none';
       }
-    });
+    }
     if (parent !== document.body) {
       ancestorSaved.push({
         el: parent,
@@ -21,10 +44,10 @@ export function exportPdf(pageEl, { pageWidth, markdown }) {
         visibility: parent.style.visibility,
         background: parent.style.background,
       });
-      parent.style.overflow = "visible";
-      parent.style.transform = "none";
-      parent.style.visibility = "visible";
-      parent.style.background = "none";
+      parent.style.overflow = 'visible';
+      parent.style.transform = 'none';
+      parent.style.visibility = 'visible';
+      parent.style.background = 'none';
     }
     current = parent;
   }
@@ -39,18 +62,22 @@ export function exportPdf(pageEl, { pageWidth, markdown }) {
     background: pageEl.style.background,
   };
   const printScale = 794 / pageWidth;
-  pageEl.style.position = "fixed";
-  pageEl.style.top = "0";
-  pageEl.style.left = "0";
+  pageEl.style.position = 'fixed';
+  pageEl.style.top = '0';
+  pageEl.style.left = '0';
   pageEl.style.transform = `scale(${printScale})`;
-  pageEl.style.transformOrigin = "top left";
-  pageEl.style.boxShadow = "none";
-  pageEl.style.background = "white";
+  pageEl.style.transformOrigin = 'top left';
+  pageEl.style.boxShadow = 'none';
+  pageEl.style.background = 'white';
 
-  const guides = pageEl.querySelectorAll("[data-margin-guide],[data-overflow]");
-  guides.forEach((g) => (g.style.display = "none"));
+  const guides = pageEl.querySelectorAll<HTMLElement>(
+    '[data-margin-guide],[data-overflow]',
+  );
+  for (const g of guides) {
+    g.style.display = 'none';
+  }
 
-  const style = document.createElement("style");
+  const style = document.createElement('style');
   style.textContent = `
     @page { size: A4; margin: 0; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
@@ -60,20 +87,24 @@ export function exportPdf(pageEl, { pageWidth, markdown }) {
 
   const savedTitle = document.title;
   const nameMatch = markdown.match(/^# (.+)/m);
-  document.title = nameMatch ? `${nameMatch[1]} Resume` : "Resume";
+  document.title = nameMatch ? `${nameMatch[1]} Resume` : 'Resume';
 
   const restore = () => {
     style.remove();
-    guides.forEach((g) => (g.style.display = ""));
+    for (const g of guides) {
+      g.style.display = '';
+    }
     Object.assign(pageEl.style, pageSaved);
-    ancestorSaved.forEach((s) => {
+    for (const s of ancestorSaved) {
       s.el.style.overflow = s.overflow;
       s.el.style.transform = s.transform;
       s.el.style.position = s.position;
       s.el.style.visibility = s.visibility;
       s.el.style.background = s.background;
-    });
-    hiddenElements.forEach((h) => (h.el.style.display = h.prev));
+    }
+    for (const h of hiddenElements) {
+      h.el.style.display = h.prev;
+    }
     document.title = savedTitle;
     window.onafterprint = null;
   };

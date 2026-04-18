@@ -1,5 +1,5 @@
-export const RESUMES = [
-`# Milo Vex
+export const RESUMES: string[] = [
+  `# Milo Vex
 Product Engineer
 San Francisco, CA · milo@milovex.dev · github.com/milovex
 
@@ -38,7 +38,7 @@ Senior project: a Git GUI that your parents could use (they couldn't, but almost
 
 TypeScript · React · Rust · Node · Systems thinking · CLI design · Making demos that accidentally ship · Reading other people's code without flinching · Knowing when the feature is done`,
 
-`# Nora Ashby
+  `# Nora Ashby
 Data Engineer
 Chicago, IL · nora@noraashby.io · github.com/nashby
 
@@ -76,7 +76,7 @@ Thesis: optimizing query planning for heterogeneous data lakes
 
 Python · SQL · Spark · Kafka · Airflow · dbt · Terraform · PostgreSQL · Writing runbooks people actually follow · Debugging distributed systems at 2am · Saying "have you checked the logs" diplomatically`,
 
-`# Theo Campos
+  `# Theo Campos
 Design Engineer
 Brooklyn, NY · theo@theocampos.com · dribbble.com/theoc
 
@@ -114,7 +114,7 @@ Senior show: a generative typography system that responds to ambient sound
 
 TypeScript · React · Svelte · WebGL · Framer Motion · Figma API · CSS that sparks joy · Spatial reasoning · Advocating for the 8px grid · Making engineers care about kerning`,
 
-`# Sam Nguyen
+  `# Sam Nguyen
 Software Engineer
 Portland, OR · sam@sambuilds.dev · github.com/sambuilds
 
@@ -152,7 +152,7 @@ Senior project: a transit app that worked offline, which felt important at the t
 
 JavaScript · TypeScript · React · Node · PostgreSQL · CSS that doesn't fight you · Writing things down · Asking good questions · Knowing when to stop`,
 
-`# Ava Lin
+  `# Ava Lin
 Junior Developer
 Austin, TX · ava@avalin.dev · github.com/avalin
 
@@ -181,7 +181,7 @@ Dean's list, focus on systems programming
 
 C · Python · JavaScript · React · Linux · Asking for help early · Reading error messages carefully`,
 
-`# Raj Patel
+  `# Raj Patel
 Staff Engineer
 Seattle, WA · raj@rajpatel.dev · github.com/rajpatel
 
@@ -230,7 +230,7 @@ Thesis: consensus protocols for geo-replicated databases
 
 Java · Go · Python · Rust · Kafka · DynamoDB · PostgreSQL · Terraform · System design · Writing RFCs · Deleting code · Making on-call less painful · Knowing when not to build it`,
 
-`# Elena Moss
+  `# Elena Moss
 Creative Technologist
 London, UK · elena@elenamoss.co · github.com/elenamoss
 
@@ -258,7 +258,7 @@ I make websites that people screenshot and send to their friends. Background in 
 
 JavaScript · Three.js · GLSL · Figma · After Effects · Making things move beautifully`,
 
-`# Marcus Chen
+  `# Marcus Chen
 Backend Engineer
 Toronto, ON · marcus@mchen.dev · github.com/marcuschen
 
@@ -302,7 +302,7 @@ Co-op placements at Bloomberg and Shopify
 
 Ruby · Rust · Go · PostgreSQL · Redis · Kafka · gRPC · Kubernetes · Database internals · Making things boring in a good way · Incident response · Writing postmortems that prevent repeats`,
 
-`# Zoe Park
+  `# Zoe Park
 UX Engineer
 Denver, CO · zoe@zoepark.design · github.com/zpark
 
@@ -337,4 +337,4 @@ Minor in computer science
 TypeScript · React · Swift · Framer · Origami · Prototyping in code · Animating with purpose · Talking to designers in their language`,
 ];
 
-export const DEFAULT_MD = RESUMES[0];
+export const DEFAULT_MD: string = RESUMES[0];

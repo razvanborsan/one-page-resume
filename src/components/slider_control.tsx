@@ -1,4 +1,18 @@
-export default function SliderControl({
+import type {ChangeEvent} from 'react';
+
+export interface SliderControlProps {
+  label: string;
+  value: number;
+  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  min: number;
+  max: number;
+  step: number;
+  format?: (v: number) => string;
+  tooltip?: string;
+  valueWidth?: string;
+}
+
+export function SliderControl({
   label,
   value,
   onChange,
@@ -7,8 +21,8 @@ export default function SliderControl({
   step,
   format = String,
   tooltip,
-  valueWidth = "w-14",
-}) {
+  valueWidth = 'w-14',
+}: SliderControlProps) {
   return (
     <div>
       <div className="flex items-center gap-1.5 mb-1.5">
@@ -36,7 +50,9 @@ export default function SliderControl({
           onChange={onChange}
           className="flex-1 h-1 accent-white"
         />
-        <span className={`text-sm font-mono tabular-nums ${valueWidth} text-right`}>
+        <span
+          className={`text-sm font-mono tabular-nums ${valueWidth} text-right`}
+        >
           {format(value)}
         </span>
       </div>
