@@ -21,8 +21,21 @@ import type {PositionedItem} from './lib/layout';
 import {exportPdf} from './lib/pdf';
 import {SliderControl} from './components/slider_control';
 
+const STORAGE_KEY = 'always-fit-resume:markdown';
+
+function loadInitialMarkdown(): string {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored !== null) return stored;
+    localStorage.setItem(STORAGE_KEY, DEFAULT_MD);
+  } catch {
+    // localStorage may be unavailable (e.g. private mode); fall back to default.
+  }
+  return DEFAULT_MD;
+}
+
 export function App() {
-  const [markdown, setMarkdown] = useState(DEFAULT_MD);
+  const [markdown, setMarkdown] = useState(loadInitialMarkdown);
   const [fontSize, setFontSize] = useState(11);
   const [padding, setPadding] = useState(DEFAULT_PADDING);
   const [fontsLoaded, setFontsLoaded] = useState(false);
@@ -54,6 +67,14 @@ export function App() {
     () => applyResumeStyles(parseMarkdown(markdown)),
     [markdown],
   );
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, markdown);
+    } catch {
+      // Ignore write failures (e.g. quota exceeded or unavailable storage).
+    }
+  }, [markdown]);
 
   useEffect(() => {
     document.fonts.ready.then(() => {
