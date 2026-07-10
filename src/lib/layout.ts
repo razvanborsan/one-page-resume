@@ -139,14 +139,8 @@ function buildLineParts(
 
 const NOOP = (): void => {};
 
-interface AdvanceContext {
-  fontSize: number;
-  contentWidth: number;
-  lineHeightMultiplier: number;
-  spacing: Spacing;
-  padding: number;
-}
-
+// Both paths count lines through pretext's shared walker, so height is defined
+// once and the measured height can't drift from what layoutBlocks renders.
 function advanceBlocks(
   blocks: StyledBlock[],
   {
@@ -155,10 +149,10 @@ function advanceBlocks(
     lineHeightMultiplier,
     spacing,
     padding,
-  }: AdvanceContext,
-  items: PositionedItem[] | null,
+  }: LayoutOptions,
+  onItem?: (item: PositionedItem) => void,
 ): number {
-  let y = padding;
+  let y = 0;
 
   for (let idx = 0; idx < blocks.length; idx++) {
     const block = blocks[idx];
@@ -166,7 +160,7 @@ function advanceBlocks(
 
     if (block.type === 'hr') {
       y += spacing.separator;
-      items?.push({type: 'hr', y});
+      onItem?.({type: 'hr', y: y + padding});
       y += 1 + spacing.separator;
       continue;
     }
@@ -178,7 +172,7 @@ function advanceBlocks(
     const effectiveWidth = contentWidth - indent;
     const prepared = prepareWithSegments(block.text, font);
 
-    if (items) {
+    if (onItem) {
       const result = layoutWithLines(
         prepared,
         effectiveWidth,
@@ -194,12 +188,12 @@ function advanceBlocks(
           searchFrom = lineStart + line.text.length;
         }
 
-        items.push({
+        onItem({
           type: 'text',
           text: line.text,
           parts,
           x: padding + indent,
-          y,
+          y: y + padding,
           font,
           fontSize: computedFontSize,
           fontWeight: block.bold ? 'bold' : 'normal',
@@ -223,33 +217,26 @@ function advanceBlocks(
   return y;
 }
 
+// padding only offsets emitted items, so it is inert when measuring.
 export function measureBlocks(
   blocks: StyledBlock[],
   {fontSize, contentWidth, lineHeightMultiplier, spacing}: MeasureOptions,
 ): number {
-  return advanceBlocks(
-    blocks,
-    {fontSize, contentWidth, lineHeightMultiplier, spacing, padding: 0},
-    null,
-  );
+  return advanceBlocks(blocks, {
+    fontSize,
+    contentWidth,
+    lineHeightMultiplier,
+    spacing,
+    padding: 0,
+  });
 }
 
 export function layoutBlocks(
   blocks: StyledBlock[],
-  {
-    fontSize,
-    contentWidth,
-    padding,
-    lineHeightMultiplier,
-    spacing,
-  }: LayoutOptions,
+  options: LayoutOptions,
 ): PositionedItem[] {
   const positionedItems: PositionedItem[] = [];
-  advanceBlocks(
-    blocks,
-    {fontSize, contentWidth, lineHeightMultiplier, spacing, padding},
-    positionedItems,
-  );
+  advanceBlocks(blocks, options, item => positionedItems.push(item));
   return positionedItems;
 }
 
