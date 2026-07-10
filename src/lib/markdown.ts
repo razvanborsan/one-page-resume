@@ -21,8 +21,6 @@ export type ContentBlockType =
   | 'ul-item'
   | 'ol-item';
 
-export type BlockType = ContentBlockType | 'hr';
-
 export interface InlineRange {
   start: number;
   end: number;
@@ -80,7 +78,8 @@ function escapePostProcess(text: string): string {
 }
 
 // Inline formatting
-function createLinkPlaceholder(
+// Appends to linkParts and returns its placeholder; the side effect is the point.
+function registerLinkPlaceholder(
   linkParts: LinkPart[],
   text: string,
   url: string,
@@ -121,16 +120,16 @@ function parseInlineFormatting(rawText: string): {
   text = text.replace(
     /\[([^\]]*)\]\(([^)\s]+)(?:\s+"([^"]*)")?\)/g,
     (_m: string, txt: string, url: string, title: string | undefined) =>
-      createLinkPlaceholder(linkParts, txt, url, title),
+      registerLinkPlaceholder(linkParts, txt, url, title),
   );
 
   text = text.replace(/<(https?:\/\/[^>]+)>/g, (_m: string, url: string) =>
-    createLinkPlaceholder(linkParts, url, url),
+    registerLinkPlaceholder(linkParts, url, url),
   );
   text = text.replace(
     /<([^@>\s]+@[^@>\s]+\.[^>\s]+)>/g,
     (_m: string, email: string) =>
-      createLinkPlaceholder(linkParts, email, `mailto:${email}`),
+      registerLinkPlaceholder(linkParts, email, `mailto:${email}`),
   );
 
   text = text.replace(/<br\s*\/?>/gi, '\n');
@@ -139,7 +138,7 @@ function parseInlineFormatting(rawText: string): {
   text = text.replace(
     /<a\s+href="([^"]*)"[^>]*>(.*?)<\/a>/gi,
     (_m: string, url: string, txt: string) =>
-      createLinkPlaceholder(linkParts, txt, url),
+      registerLinkPlaceholder(linkParts, txt, url),
   );
 
   const emphRegex =
@@ -199,9 +198,11 @@ const OL_RE = /^(\d+)\.\s+(.*)/;
 const REF_LINK_RE =
   /^\[([^\]]+)\]:\s+<?([^\s>]+)>?(?:\s+["'(]([^"')]+)["')])?$/;
 
-export function parseMarkdown(md: string): ParsedBlock[] {
-  const lines = md.split('\n');
+function isIndentedCodeLine(line: string): boolean {
+  return line.startsWith('    ') || line.startsWith('\t');
+}
 
+function collectReferenceLinks(lines: string[]): Map<string, ReferenceLink> {
   const referenceLinks = new Map<string, ReferenceLink>();
   for (const line of lines) {
     const m = line.match(REF_LINK_RE);
@@ -209,6 +210,40 @@ export function parseMarkdown(md: string): ParsedBlock[] {
       referenceLinks.set(m[1].toLowerCase(), {url: m[2], title: m[3]});
     }
   }
+  return referenceLinks;
+}
+
+// Expands reference-style links against the collected definitions, then runs
+// the inline pass to produce plain text plus its formatting ranges.
+function resolveInlineContent(
+  block: ParsedBlock,
+  referenceLinks: Map<string, ReferenceLink>,
+): ParsedBlock {
+  if (block.type === 'hr') return block;
+  let text = block.text;
+  if (referenceLinks.size > 0) {
+    text = text.replace(
+      /\[([^\]]+)\]\[([^\]]*)\]/g,
+      (m: string, txt: string, id: string) => {
+        const key = (id || txt).toLowerCase();
+        const ref = referenceLinks.get(key);
+        return ref
+          ? `[${txt}](${ref.url}${ref.title ? ` "${ref.title}"` : ''})`
+          : m;
+      },
+    );
+  }
+  const {plain, ranges} = parseInlineFormatting(text);
+  return {
+    ...block,
+    text: plain,
+    ...(ranges.length > 0 ? {inlineRanges: ranges} : {}),
+  };
+}
+
+export function parseMarkdown(md: string): ParsedBlock[] {
+  const lines = md.split('\n');
+  const referenceLinks = collectReferenceLinks(lines);
 
   const blocks: ParsedBlock[] = [];
   let paragraphLines: string[] = [];
@@ -263,39 +298,14 @@ export function parseMarkdown(md: string): ParsedBlock[] {
       continue;
     }
 
-    if (escapedLine.startsWith('###### ')) {
+    const heading = escapedLine.match(/^(#{1,6}) /);
+    if (heading) {
       flushParagraph();
-      blocks.push({type: 'h6', text: line.slice(7)});
-      i++;
-      continue;
-    }
-    if (escapedLine.startsWith('##### ')) {
-      flushParagraph();
-      blocks.push({type: 'h5', text: line.slice(6)});
-      i++;
-      continue;
-    }
-    if (escapedLine.startsWith('#### ')) {
-      flushParagraph();
-      blocks.push({type: 'h4', text: line.slice(5)});
-      i++;
-      continue;
-    }
-    if (escapedLine.startsWith('### ')) {
-      flushParagraph();
-      blocks.push({type: 'h3', text: line.slice(4)});
-      i++;
-      continue;
-    }
-    if (escapedLine.startsWith('## ')) {
-      flushParagraph();
-      blocks.push({type: 'h2', text: line.slice(3)});
-      i++;
-      continue;
-    }
-    if (escapedLine.startsWith('# ')) {
-      flushParagraph();
-      blocks.push({type: 'h1', text: line.slice(2)});
+      const level = heading[1].length;
+      blocks.push({
+        type: `h${level}` as ContentBlockType,
+        text: line.slice(level + 1),
+      });
       i++;
       continue;
     }
@@ -316,13 +326,10 @@ export function parseMarkdown(md: string): ParsedBlock[] {
       continue;
     }
 
-    if (line.startsWith('    ') || line.startsWith('\t')) {
+    if (isIndentedCodeLine(line)) {
       flushParagraph();
       const codeLines: string[] = [];
-      while (
-        i < lines.length &&
-        (lines[i].startsWith('    ') || lines[i].startsWith('\t'))
-      ) {
+      while (i < lines.length && isIndentedCodeLine(lines[i])) {
         codeLines.push(
           lines[i].startsWith('\t') ? lines[i].slice(1) : lines[i].slice(4),
         );
@@ -353,26 +360,5 @@ export function parseMarkdown(md: string): ParsedBlock[] {
 
   flushParagraph();
 
-  return blocks.map(block => {
-    if (block.type === 'hr') return block;
-    let text = block.text;
-    if (referenceLinks.size > 0) {
-      text = text.replace(
-        /\[([^\]]+)\]\[([^\]]*)\]/g,
-        (m: string, txt: string, id: string) => {
-          const key = (id || txt).toLowerCase();
-          const ref = referenceLinks.get(key);
-          return ref
-            ? `[${txt}](${ref.url}${ref.title ? ` "${ref.title}"` : ''})`
-            : m;
-        },
-      );
-    }
-    const {plain, ranges} = parseInlineFormatting(text);
-    return {
-      ...block,
-      text: plain,
-      ...(ranges.length > 0 ? {inlineRanges: ranges} : {}),
-    };
-  });
+  return blocks.map(block => resolveInlineContent(block, referenceLinks));
 }
