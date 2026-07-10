@@ -98,15 +98,13 @@ describe('SliderControl', () => {
   });
 
   it('reports the new value to onChange when the user moves the slider', async () => {
-    // The value must be read inside the handler: this is a controlled input,
-    // so React resets event.target back to the value prop right afterwards.
-    let reportedValue: string | undefined;
+    let reportedValue: number | undefined;
     await render(
       <SliderControl
         label="Zoom"
         value={1}
-        onChange={e => {
-          reportedValue = e.target.value;
+        onChange={v => {
+          reportedValue = v;
         }}
         min={0}
         max={2}
@@ -116,6 +114,6 @@ describe('SliderControl', () => {
 
     await page.getByRole('slider').fill('1.5');
 
-    expect(reportedValue).toBe('1.5');
+    expect(reportedValue).toBe(1.5);
   });
 });

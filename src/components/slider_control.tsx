@@ -1,9 +1,18 @@
-import type {ChangeEvent} from 'react';
+import {
+  Slider,
+  SliderTrack,
+  SliderThumb,
+  SliderOutput,
+  Label,
+  Button,
+  TooltipTrigger,
+  Tooltip,
+} from 'react-aria-components';
 
 export interface SliderControlProps {
   label: string;
   value: number;
-  onChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onChange: (value: number) => void;
   min: number;
   max: number;
   step: number;
@@ -24,38 +33,50 @@ export function SliderControl({
   valueWidth = 'w-14',
 }: SliderControlProps) {
   return (
-    <div>
+    <Slider
+      value={value}
+      onChange={onChange}
+      minValue={min}
+      maxValue={max}
+      step={step}
+    >
       <div className="flex items-center gap-1.5 mb-1.5">
-        <p className="text-xs text-neutral-500 uppercase tracking-widest">
+        <Label className="text-xs text-neutral-500 uppercase tracking-widest">
           {label}
-        </p>
+        </Label>
         {tooltip && (
-          <span className="relative group/tip">
-            <span className="w-3.5 h-3.5 rounded-full border border-neutral-600 text-neutral-500 text-[9px] font-medium flex items-center justify-center cursor-default">
+          <TooltipTrigger delay={200} closeDelay={0}>
+            <Button className="w-3.5 h-3.5 rounded-full border border-neutral-600 text-neutral-500 text-[9px] font-medium flex items-center justify-center cursor-default outline-none data-focus-visible:ring-1 data-focus-visible:ring-white/60">
               i
-            </span>
-            <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-1.5 text-xs text-neutral-300 bg-neutral-800 border border-neutral-700 rounded-md w-48 opacity-0 pointer-events-none group-hover/tip:opacity-100 transition-opacity">
+            </Button>
+            <Tooltip
+              offset={6}
+              className="max-w-48 px-2.5 py-1.5 text-xs text-neutral-300 bg-neutral-800 border border-neutral-700 rounded-md shadow-lg"
+            >
               {tooltip}
-            </span>
-          </span>
+            </Tooltip>
+          </TooltipTrigger>
         )}
       </div>
       <div className="flex items-center gap-3">
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onChange={onChange}
-          className="flex-1 h-1 accent-white"
-        />
-        <span
+        <SliderTrack className="relative flex-1 h-4 flex items-center">
+          {({state}) => (
+            <>
+              <div className="absolute h-1 w-full rounded-full bg-neutral-700" />
+              <div
+                className="absolute h-1 rounded-full bg-white"
+                style={{width: `${state.getThumbPercent(0) * 100}%`}}
+              />
+              <SliderThumb className="top-[50%] h-3 w-3 rounded-full bg-white border border-neutral-300 shadow outline-none transition data-dragging:scale-110 data-focus-visible:ring-2 data-focus-visible:ring-white/60" />
+            </>
+          )}
+        </SliderTrack>
+        <SliderOutput
           className={`text-sm font-mono tabular-nums ${valueWidth} text-right`}
         >
           {format(value)}
-        </span>
+        </SliderOutput>
       </div>
-    </div>
+    </Slider>
   );
 }

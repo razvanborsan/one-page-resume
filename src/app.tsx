@@ -1,4 +1,17 @@
 import {useState, useEffect, useMemo, useRef, useCallback} from 'react';
+import {
+  Button,
+  Link,
+  SwitchField,
+  SwitchButton,
+  TextField,
+  TextArea,
+  Label,
+  Meter,
+  ToggleButtonGroup,
+  ToggleButton,
+} from 'react-aria-components';
+import type {Key} from 'react-aria-components';
 
 import {RESUMES, DEFAULT_MD} from './data/resumes';
 import {parseMarkdown} from './lib/markdown';
@@ -159,14 +172,14 @@ export function App() {
     spacing,
   ]);
 
-  const handleFontSizeSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFontSizeSlider = (v: number) => {
     setAutoFit(false);
-    setFontSize(parseFloat(e.target.value));
+    setFontSize(v);
   };
 
-  const handleLineHeightSlider = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLineHeightSlider = (v: number) => {
     setAutoFit(false);
-    setLineHeightMultiplier(parseFloat(e.target.value));
+    setLineHeightMultiplier(v);
   };
 
   const handleExportPdf = useCallback(() => {
@@ -184,8 +197,18 @@ export function App() {
   return (
     <div className="h-screen flex flex-col overflow-hidden">
       <main className="flex-1 flex flex-col sm:flex-row bg-neutral-900 text-white min-h-0 overflow-hidden">
-        {/* Mobile tab bar */}
-        <div className="sm:hidden flex border-b border-neutral-800 shrink-0">
+        {/* Mobile view switcher */}
+        <ToggleButtonGroup
+          aria-label="Choose view"
+          selectionMode="single"
+          disallowEmptySelection
+          selectedKeys={[activeTab]}
+          onSelectionChange={(keys: Set<Key>) => {
+            const [key] = keys;
+            if (key !== undefined) setActiveTab(String(key));
+          }}
+          className="sm:hidden flex border-b border-neutral-800 shrink-0"
+        >
           {(
             [
               ['editor', 'Editor'],
@@ -193,37 +216,33 @@ export function App() {
               ['settings', 'Settings'],
             ] as const
           ).map(([key, label]) => (
-            <button
+            <ToggleButton
               key={key}
-              onClick={() => setActiveTab(key)}
-              className={`flex-1 py-2.5 text-xs uppercase tracking-widest transition-colors ${
-                activeTab === key
-                  ? 'text-white border-b-2 border-white'
-                  : 'text-neutral-500 hover:text-neutral-300'
-              }`}
+              id={key}
+              className="flex-1 py-2.5 text-xs uppercase tracking-widest transition-colors cursor-pointer text-neutral-500 data-hovered:text-neutral-300 data-selected:text-white data-selected:border-b-2 data-selected:border-white outline-none data-focus-visible:ring-1 data-focus-visible:ring-inset data-focus-visible:ring-white/60"
             >
               {label}
-            </button>
+            </ToggleButton>
           ))}
-        </div>
+        </ToggleButtonGroup>
 
         {/* Markdown editor */}
-        <div
+        <TextField
+          value={markdown}
+          onChange={setMarkdown}
           className={`flex-1 min-w-0 self-stretch border-r border-neutral-800 flex-col ${activeTab === 'editor' ? 'flex' : 'hidden'} sm:flex`}
         >
           <div className="px-4 py-3 border-b border-neutral-800">
-            <p className="text-xs text-neutral-500 uppercase tracking-widest">
+            <Label className="text-xs text-neutral-500 uppercase tracking-widest">
               Markdown
-            </p>
+            </Label>
           </div>
-          <textarea
-            value={markdown}
-            onChange={e => setMarkdown(e.target.value)}
+          <TextArea
             spellCheck={false}
             className="flex-1 bg-transparent text-neutral-300 text-sm font-mono leading-relaxed p-4 resize-none outline-none ring-0 focus:outline-none focus:ring-0 border-none placeholder-neutral-600 pagefit-scrollbar"
             style={{caretColor: '#fff'}}
           />
-        </div>
+        </TextField>
 
         {/* A4 Page */}
         <div
@@ -334,11 +353,12 @@ export function App() {
               <h1 className="text-2xl font-bold tracking-tight">
                 Always Fit Resume
               </h1>
-              <a
+              <Link
                 href="https://github.com/vladartym/always-fit-resume"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-neutral-500 hover:text-white transition-colors"
+                aria-label="View source on GitHub"
+                className="text-neutral-500 hover:text-white transition-colors outline-none rounded data-focus-visible:ring-2 data-focus-visible:ring-white/60"
               >
                 <svg
                   width="20"
@@ -348,19 +368,19 @@ export function App() {
                 >
                   <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z" />
                 </svg>
-              </a>
+              </Link>
             </div>
             <div className="text-neutral-400 text-sm leading-relaxed space-y-2">
               <p>
                 A resume builder using{' '}
-                <a
+                <Link
                   href="https://github.com/chenglou/pretext"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-neutral-300 underline underline-offset-2 hover:text-white transition-colors"
+                  className="text-neutral-300 underline underline-offset-2 hover:text-white transition-colors cursor-pointer outline-none rounded data-focus-visible:ring-2 data-focus-visible:ring-white/60"
                 >
                   pretext
-                </a>{' '}
+                </Link>{' '}
                 for instant, DOM-free text measurement.
               </p>
               <p>
@@ -375,39 +395,30 @@ export function App() {
                 to fit everything on one A4 page.
               </p>
             </div>
-            <button
-              onClick={handleShuffle}
-              className="mt-3 w-full px-3 py-2 text-sm font-medium border border-neutral-700 text-neutral-300 rounded-lg hover:bg-neutral-800 hover:text-white transition-colors"
+            <Button
+              onPress={handleShuffle}
+              className="mt-3 w-full px-3 py-2 text-sm font-medium border border-neutral-700 text-neutral-300 rounded-lg cursor-pointer hover:bg-neutral-800 hover:text-white transition-colors outline-none data-focus-visible:ring-2 data-focus-visible:ring-white/60"
             >
               Shuffle Resume
-            </button>
+            </Button>
           </div>
 
           {/* Auto-fit toggle */}
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-neutral-500 uppercase tracking-widest">
-              Auto-fit
-            </p>
-            <button
-              onClick={() => setAutoFit(!autoFit)}
-              className={`w-10 h-5 rounded-full transition-colors relative ${
-                autoFit ? 'bg-emerald-500' : 'bg-neutral-700'
-              }`}
-            >
-              <div
-                className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform"
-                style={{
-                  left: 2,
-                  transform: autoFit ? 'translateX(20px)' : 'translateX(0)',
-                }}
-              />
-            </button>
-          </div>
+          <SwitchField isSelected={autoFit} onChange={setAutoFit}>
+            <SwitchButton className="group flex w-full items-center justify-between cursor-pointer">
+              <span className="text-xs text-neutral-500 uppercase tracking-widest">
+                Auto-fit
+              </span>
+              <span className="w-10 h-5 rounded-full bg-neutral-700 group-data-selected:bg-emerald-500 transition-colors relative shrink-0 group-data-focus-visible:ring-2 group-data-focus-visible:ring-white/60 group-data-focus-visible:ring-offset-2 group-data-focus-visible:ring-offset-neutral-900">
+                <span className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform group-data-selected:translate-x-5" />
+              </span>
+            </SwitchButton>
+          </SwitchField>
 
           <SliderControl
             label="Max Font Size"
             value={maxFontSize}
-            onChange={e => setMaxFontSize(parseFloat(e.target.value))}
+            onChange={setMaxFontSize}
             min={8}
             max={24}
             step={0.5}
@@ -439,7 +450,7 @@ export function App() {
           <SliderControl
             label="Page Margin"
             value={padding}
-            onChange={e => setPadding(parseInt(e.target.value, 10))}
+            onChange={setPadding}
             min={16}
             max={80}
             step={1}
@@ -449,7 +460,7 @@ export function App() {
           <SliderControl
             label="Section Spacing"
             value={sectionSpacing}
-            onChange={e => setSectionSpacing(parseInt(e.target.value, 10))}
+            onChange={setSectionSpacing}
             min={0}
             max={48}
             step={1}
@@ -460,7 +471,7 @@ export function App() {
           <SliderControl
             label="Item Spacing"
             value={itemSpacing}
-            onChange={e => setItemSpacing(parseFloat(e.target.value))}
+            onChange={setItemSpacing}
             min={0}
             max={30}
             step={1}
@@ -471,7 +482,7 @@ export function App() {
           <SliderControl
             label="Separator Spacing"
             value={separatorSpacing}
-            onChange={e => setSeparatorSpacing(parseInt(e.target.value, 10))}
+            onChange={setSeparatorSpacing}
             min={0}
             max={30}
             step={1}
@@ -480,10 +491,10 @@ export function App() {
           />
 
           {/* Page fit */}
-          <div>
-            <p className="text-xs text-neutral-500 uppercase tracking-widest mb-1.5">
+          <Meter value={fillPercent}>
+            <Label className="block text-xs text-neutral-500 uppercase tracking-widest mb-1.5">
               Page Fit
-            </p>
+            </Label>
             <div className="h-1.5 bg-neutral-800 rounded-full overflow-hidden mb-2">
               <div
                 className="h-full rounded-full transition-all duration-100"
@@ -507,15 +518,15 @@ export function App() {
                 {measuredHeight}/{maxContentHeight}px · {measureTime}ms
               </span>
             </div>
-          </div>
+          </Meter>
 
           {/* Export */}
-          <button
-            onClick={handleExportPdf}
-            className="mt-auto w-full px-3 py-2 text-sm font-medium bg-white text-neutral-900 rounded-lg hover:bg-neutral-200 transition-colors"
+          <Button
+            onPress={handleExportPdf}
+            className="mt-auto w-full px-3 py-2 text-sm font-medium bg-white text-neutral-900 rounded-lg cursor-pointer hover:bg-neutral-200 transition-colors outline-none data-focus-visible:ring-2 data-focus-visible:ring-white/60 data-focus-visible:ring-offset-2 data-focus-visible:ring-offset-neutral-900"
           >
             Export as PDF
-          </button>
+          </Button>
         </div>
       </main>
     </div>
