@@ -34,7 +34,7 @@ import type {PositionedItem} from './lib/layout';
 import {exportPdf} from './lib/pdf';
 import {SliderControl} from './components/slider_control';
 
-const STORAGE_KEY = 'always-fit-resume:markdown';
+const STORAGE_KEY = 'one-page-resume:markdown';
 
 function loadInitialMarkdown(): string {
   try {
@@ -351,10 +351,10 @@ export function App() {
           <div>
             <div className="flex items-center justify-between mb-1">
               <h1 className="text-2xl font-bold tracking-tight">
-                Always Fit Resume
+                One Page Resume
               </h1>
               <Link
-                href="https://github.com/vladartym/always-fit-resume"
+                href="https://github.com/razvanborsan/one-page-resume"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="View source on GitHub"
@@ -393,6 +393,18 @@ export function App() {
                   line spacing
                 </span>{' '}
                 to fit everything on one A4 page.
+              </p>
+              <p className="text-xs text-neutral-500">
+                Forked from{' '}
+                <Link
+                  href="https://github.com/vladartym/always-fit-resume"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2 hover:text-neutral-300 transition-colors cursor-pointer outline-none rounded data-focus-visible:ring-2 data-focus-visible:ring-white/60"
+                >
+                  always-fit-resume
+                </Link>{' '}
+                by Vlad Artym.
               </p>
             </div>
             <Button

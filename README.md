@@ -1,4 +1,4 @@
-# Always Fit Resume
+# One Page Resume
 
 A resume builder that auto-scales font size and line spacing to always fit on one A4 page.
 
@@ -19,8 +19,8 @@ Powered by [pretext](https://github.com/chenglou/pretext) for DOM-free text meas
 ## Quick Start
 
 ```bash
-git clone https://github.com/vladartym/always-fit-resume.git
-cd always-fit-resume
+git clone https://github.com/razvanborsan/one-page-resume.git
+cd one-page-resume
 npm install
 npm run dev
 ```
@@ -77,6 +77,10 @@ Skill 1 · Skill 2 · Skill 3
 - [pretext](https://github.com/chenglou/pretext) — DOM-free text measurement
 - [Tailwind CSS](https://tailwindcss.com)
 - [Vite](https://vite.dev)
+
+## Credits
+
+Forked from [always-fit-resume](https://github.com/vladartym/always-fit-resume) by Vlad Artym.
 
 ## License
 
