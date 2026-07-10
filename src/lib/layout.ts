@@ -1,4 +1,8 @@
-import {prepareWithSegments, layout, layoutWithLines} from '@chenglou/pretext';
+import {
+  prepareWithSegments,
+  layoutWithLines,
+  walkLineRanges,
+} from '@chenglou/pretext';
 
 import type {InlineRange} from './markdown';
 import type {StyledBlock, StyledContentBlock} from './resume_styles';
@@ -133,36 +137,103 @@ function buildLineParts(
     : undefined;
 }
 
-// Measure blocks (pure math, no DOM)
+const NOOP = (): void => {};
+
+interface AdvanceContext {
+  fontSize: number;
+  contentWidth: number;
+  lineHeightMultiplier: number;
+  spacing: Spacing;
+  padding: number;
+}
+
+function advanceBlocks(
+  blocks: StyledBlock[],
+  {
+    fontSize,
+    contentWidth,
+    lineHeightMultiplier,
+    spacing,
+    padding,
+  }: AdvanceContext,
+  items: PositionedItem[] | null,
+): number {
+  let y = padding;
+
+  for (let idx = 0; idx < blocks.length; idx++) {
+    const block = blocks[idx];
+    y += getBlockTopMargin(block, spacing);
+
+    if (block.type === 'hr') {
+      y += spacing.separator;
+      items?.push({type: 'hr', y});
+      y += 1 + spacing.separator;
+      continue;
+    }
+
+    const computedFontSize = fontSize * block.fontScale;
+    const computedLineHeight = computedFontSize * lineHeightMultiplier;
+    const font = buildCssFontString(fontSize, block);
+    const indent = block.indent ?? 0;
+    const effectiveWidth = contentWidth - indent;
+    const prepared = prepareWithSegments(block.text, font);
+
+    if (items) {
+      const result = layoutWithLines(
+        prepared,
+        effectiveWidth,
+        computedLineHeight,
+      );
+      let searchFrom = 0;
+      for (const line of result.lines) {
+        let parts: LinePart[] | undefined;
+        if (block.inlineRanges) {
+          const matchIdx = block.text.indexOf(line.text, searchFrom);
+          const lineStart = matchIdx >= 0 ? matchIdx : searchFrom;
+          parts = buildLineParts(line.text, lineStart, block.inlineRanges);
+          searchFrom = lineStart + line.text.length;
+        }
+
+        items.push({
+          type: 'text',
+          text: line.text,
+          parts,
+          x: padding + indent,
+          y,
+          font,
+          fontSize: computedFontSize,
+          fontWeight: block.bold ? 'bold' : 'normal',
+          fontStyle: block.italic ? 'italic' : undefined,
+          fontFamily: block.monospace ? MONO_FONT : undefined,
+          lineHeight: computedLineHeight,
+          color: block.color,
+        });
+        y += computedLineHeight;
+      }
+    } else {
+      const lineCount = walkLineRanges(prepared, effectiveWidth, NOOP);
+      y += lineCount * computedLineHeight;
+    }
+
+    if (idx + 1 >= blocks.length || !shouldSkipBottomMargin(blocks[idx + 1])) {
+      y += block.mb;
+    }
+  }
+
+  return y;
+}
+
 export function measureBlocks(
   blocks: StyledBlock[],
   {fontSize, contentWidth, lineHeightMultiplier, spacing}: MeasureOptions,
 ): number {
-  let h = 0;
-  for (let idx = 0; idx < blocks.length; idx++) {
-    const block = blocks[idx];
-    h += getBlockTopMargin(block, spacing);
-    if (block.type === 'hr') {
-      h += spacing.separator + 1 + spacing.separator;
-      continue;
-    }
-    const computedFontSize = fontSize * block.fontScale;
-    const computedLineHeight = computedFontSize * lineHeightMultiplier;
-    const font = buildCssFontString(fontSize, block);
-    const effectiveWidth = contentWidth - (block.indent ?? 0);
-    h += layout(
-      prepareWithSegments(block.text, font),
-      effectiveWidth,
-      computedLineHeight,
-    ).height;
-    if (idx + 1 >= blocks.length || !shouldSkipBottomMargin(blocks[idx + 1])) {
-      h += block.mb;
-    }
-  }
-  return h;
+  return advanceBlocks(
+    blocks,
+    {fontSize, contentWidth, lineHeightMultiplier, spacing, padding: 0},
+    null,
+  );
 }
 
-// Layout blocks into positioned lines
 export function layoutBlocks(
   blocks: StyledBlock[],
   {
@@ -174,62 +245,11 @@ export function layoutBlocks(
   }: LayoutOptions,
 ): PositionedItem[] {
   const positionedItems: PositionedItem[] = [];
-  let y = padding;
-
-  for (let idx = 0; idx < blocks.length; idx++) {
-    const block = blocks[idx];
-    y += getBlockTopMargin(block, spacing);
-    if (block.type === 'hr') {
-      y += spacing.separator;
-      positionedItems.push({type: 'hr', y});
-      y += 1 + spacing.separator;
-      continue;
-    }
-
-    const computedFontSize = fontSize * block.fontScale;
-    const computedLineHeight = computedFontSize * lineHeightMultiplier;
-    const font = buildCssFontString(fontSize, block);
-    const indent = block.indent ?? 0;
-    const effectiveWidth = contentWidth - indent;
-    const prepared = prepareWithSegments(block.text, font);
-    const result = layoutWithLines(
-      prepared,
-      effectiveWidth,
-      computedLineHeight,
-    );
-
-    let searchFrom = 0;
-    for (const line of result.lines) {
-      let parts: LinePart[] | undefined;
-      if (block.inlineRanges) {
-        const matchIdx = block.text.indexOf(line.text, searchFrom);
-        const lineStart = matchIdx >= 0 ? matchIdx : searchFrom;
-        parts = buildLineParts(line.text, lineStart, block.inlineRanges);
-        searchFrom = lineStart + line.text.length;
-      }
-
-      positionedItems.push({
-        type: 'text',
-        text: line.text,
-        parts,
-        x: padding + indent,
-        y,
-        font,
-        fontSize: computedFontSize,
-        fontWeight: block.bold ? 'bold' : 'normal',
-        fontStyle: block.italic ? 'italic' : undefined,
-        fontFamily: block.monospace ? MONO_FONT : undefined,
-        lineHeight: computedLineHeight,
-        color: block.color,
-      });
-      y += computedLineHeight;
-    }
-
-    if (idx + 1 >= blocks.length || !shouldSkipBottomMargin(blocks[idx + 1])) {
-      y += block.mb;
-    }
-  }
-
+  advanceBlocks(
+    blocks,
+    {fontSize, contentWidth, lineHeightMultiplier, spacing, padding},
+    positionedItems,
+  );
   return positionedItems;
 }
 
