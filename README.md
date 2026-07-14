@@ -21,8 +21,8 @@ Powered by [pretext](https://github.com/chenglou/pretext) for DOM-free text meas
 ```bash
 git clone https://github.com/razvanborsan/one-page-resume.git
 cd one-page-resume
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173).

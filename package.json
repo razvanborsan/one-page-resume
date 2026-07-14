@@ -1,6 +1,7 @@
 {
   "name": "one-page-resume",
   "version": "1.0.0",
+  "packageManager": "bun@1.2.15",
   "description": "A resume builder that auto-scales font size and line spacing to always fit on one page. Powered by pretext for instant, DOM-free text measurement.",
   "license": "MIT",
   "author": "Razvan Borsan",
@@ -29,7 +30,7 @@
     "lint:fix": "eslint src/ --fix",
     "format": "prettier --write 'src/**/*.{ts,tsx}'",
     "format:check": "prettier --check 'src/**/*.{ts,tsx}'",
-    "validate": "npm run format:check && npm run typecheck && npm run lint && npm run test && npm run build"
+    "validate": "bun run format:check && bun run typecheck && bun run lint && bun run test && bun run build"
   },
   "dependencies": {
     "@chenglou/pretext": "^0.0.8",
