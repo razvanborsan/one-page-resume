@@ -34,6 +34,7 @@ export function SliderControl({
 }: SliderControlProps) {
   return (
     <Slider
+      aria-label={label}
       value={value}
       onChange={onChange}
       minValue={min}
@@ -67,7 +68,10 @@ export function SliderControl({
                 className="absolute h-1 rounded-full bg-white"
                 style={{width: `${state.getThumbPercent(0) * 100}%`}}
               />
-              <SliderThumb className="top-[50%] h-3 w-3 rounded-full bg-white border border-neutral-300 shadow outline-none transition data-dragging:scale-110 data-focus-visible:ring-2 data-focus-visible:ring-white/60" />
+              <SliderThumb
+                aria-label={label}
+                className="top-[50%] h-3 w-3 rounded-full bg-white border border-neutral-300 shadow outline-none transition data-dragging:scale-110 data-focus-visible:ring-2 data-focus-visible:ring-white/60"
+              />
             </>
           )}
         </SliderTrack>

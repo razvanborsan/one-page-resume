@@ -1,4 +1,5 @@
-import {useState, useEffect, useMemo, useRef, useCallback} from 'react';
+import {useState, useEffect, useLayoutEffect, useRef, useCallback} from 'react';
+import type {CSSProperties} from 'react';
 import {
   Button,
   Link,
@@ -13,24 +14,18 @@ import {
 } from 'react-aria-components';
 import type {Key} from 'react-aria-components';
 
+import {ResumeMarkdown} from './components/resume_markdown';
 import {RESUMES, DEFAULT_MD} from './data/resumes';
-import {parseMarkdown} from './lib/markdown';
-import {applyResumeStyles, COLORS} from './lib/resume_styles';
 import {
   PAGE_WIDTH,
   PAGE_HEIGHT,
   DEFAULT_PADDING,
-  BODY_FONT,
-  MONO_FONT,
   LINE_HEIGHT_MIN,
   LINE_HEIGHT_MAX,
   LINE_HEIGHT_DEFAULT,
   DEFAULT_MAX_FONT_SIZE,
-  measureBlocks,
-  layoutBlocks,
-  findOptimalFit,
-} from './lib/layout';
-import type {PositionedItem} from './lib/layout';
+} from './lib/page';
+import {findRenderedResumeFit, measureRenderedResume} from './lib/page_fit';
 import {exportPdf} from './lib/pdf';
 import {SliderControl} from './components/slider_control';
 
@@ -61,25 +56,13 @@ export function App() {
   const [autoFit, setAutoFit] = useState(true);
   const [pageScale, setPageScale] = useState(1);
   const [activeTab, setActiveTab] = useState('preview');
+  const [measuredHeight, setMeasuredHeight] = useState(0);
+  const [measureTime, setMeasureTime] = useState(0);
   const pageRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
-  const contentWidth = PAGE_WIDTH - padding * 2;
   const maxContentHeight = PAGE_HEIGHT - padding * 2;
-
-  const spacing = useMemo(
-    () => ({
-      section: sectionSpacing,
-      item: itemSpacing,
-      separator: separatorSpacing,
-    }),
-    [sectionSpacing, itemSpacing, separatorSpacing],
-  );
-
-  const blocks = useMemo(
-    () => applyResumeStyles(parseMarkdown(markdown)),
-    [markdown],
-  );
 
   useEffect(() => {
     try {
@@ -113,63 +96,39 @@ export function App() {
     };
   }, []);
 
-  const {measuredHeight, measureTime} = useMemo(() => {
-    if (!fontsLoaded) return {measuredHeight: 0, measureTime: 0};
-    const t0 = performance.now();
-    const h = measureBlocks(blocks, {
-      fontSize,
-      contentWidth,
-      lineHeightMultiplier,
-      spacing,
-    });
-    return {
-      measuredHeight: Math.round(h),
-      measureTime: +(performance.now() - t0).toFixed(2),
-    };
-  }, [
-    blocks,
-    fontSize,
-    contentWidth,
-    lineHeightMultiplier,
-    spacing,
-    fontsLoaded,
-  ]);
+  useLayoutEffect(() => {
+    const element = contentRef.current;
+    if (!element || !fontsLoaded || element.getClientRects().length === 0) {
+      return;
+    }
 
-  const positionedItems: PositionedItem[] = useMemo(() => {
-    if (!fontsLoaded) return [];
-    return layoutBlocks(blocks, {
-      fontSize,
-      contentWidth,
-      padding,
-      lineHeightMultiplier,
-      spacing,
-    });
-  }, [
-    blocks,
-    fontSize,
-    contentWidth,
-    padding,
-    lineHeightMultiplier,
-    spacing,
-    fontsLoaded,
-  ]);
+    const result = autoFit
+      ? findRenderedResumeFit(element, {
+          maxContentHeight,
+          maxFontSize,
+          padding,
+        })
+      : measureRenderedResume(element, fontSize, lineHeightMultiplier, padding);
 
-  useEffect(() => {
-    if (!fontsLoaded || !autoFit) return;
-    const {fontSize: optFs, lineHeightMultiplier: optLh} = findOptimalFit(
-      blocks,
-      {contentWidth, maxContentHeight, maxFontSize, spacing},
-    );
-    setFontSize(Math.min(optFs, maxFontSize));
-    setLineHeightMultiplier(optLh);
+    if (autoFit) {
+      setFontSize(result.fontSize);
+      setLineHeightMultiplier(result.lineHeightMultiplier);
+    }
+    setMeasuredHeight(result.measuredHeight);
+    setMeasureTime(result.measureTime);
   }, [
-    blocks,
     autoFit,
+    activeTab,
     fontsLoaded,
-    contentWidth,
+    fontSize,
+    itemSpacing,
+    lineHeightMultiplier,
+    markdown,
     maxContentHeight,
     maxFontSize,
-    spacing,
+    padding,
+    sectionSpacing,
+    separatorSpacing,
   ]);
 
   const handleFontSizeSlider = (v: number) => {
@@ -252,7 +211,7 @@ export function App() {
           <div
             ref={pageRef}
             data-pagefit-page
-            className="relative bg-white shadow-2xl shadow-black/50 shrink-0"
+            className="resume-page relative bg-white shadow-2xl shadow-black/50 shrink-0"
             style={{
               width: PAGE_WIDTH,
               height: PAGE_HEIGHT,
@@ -261,61 +220,23 @@ export function App() {
               transformOrigin: 'center center',
             }}
           >
-            {positionedItems.map((item, i) => {
-              if (item.type === 'hr') {
-                return (
-                  <div
-                    key={i}
-                    style={{
-                      position: 'absolute',
-                      left: padding,
-                      right: padding,
-                      top: item.y,
-                      height: 1,
-                      backgroundColor: '#ddd',
-                    }}
-                  />
-                );
+            <div
+              ref={contentRef}
+              data-resume-content
+              className="typeset typeset-resume w-full"
+              style={
+                {
+                  padding,
+                  '--typeset-size': `${fontSize}px`,
+                  '--typeset-leading': lineHeightMultiplier,
+                  '--resume-section-spacing': `${sectionSpacing}px`,
+                  '--resume-item-spacing': `${itemSpacing}px`,
+                  '--resume-separator-spacing': `${separatorSpacing}px`,
+                } as CSSProperties
               }
-              return (
-                <div
-                  key={i}
-                  style={{
-                    position: 'absolute',
-                    left: item.x,
-                    top: item.y,
-                    fontSize: item.fontSize,
-                    fontWeight: item.fontWeight,
-                    fontStyle: item.fontStyle,
-                    fontFamily: item.fontFamily ?? BODY_FONT,
-                    lineHeight: `${item.lineHeight}px`,
-                    color: item.color,
-                    whiteSpace: 'pre',
-                  }}
-                >
-                  {item.parts
-                    ? item.parts.map((part, j) => (
-                        <span
-                          key={j}
-                          style={{
-                            fontWeight: part.bold ? 'bold' : undefined,
-                            fontStyle: part.italic ? 'italic' : undefined,
-                            fontFamily: part.code ? MONO_FONT : undefined,
-                            backgroundColor: part.code
-                              ? COLORS.inlineCodeBg
-                              : undefined,
-                            borderRadius: part.code ? 3 : undefined,
-                            color: part.link ? COLORS.inlineLink : undefined,
-                            textDecoration: part.link ? 'underline' : undefined,
-                          }}
-                        >
-                          {part.text}
-                        </span>
-                      ))
-                    : item.text}
-                </div>
-              );
-            })}
+            >
+              <ResumeMarkdown>{markdown}</ResumeMarkdown>
+            </div>
 
             <div
               data-margin-guide
@@ -372,16 +293,8 @@ export function App() {
             </div>
             <div className="text-neutral-400 text-sm leading-relaxed space-y-2">
               <p>
-                A resume builder using{' '}
-                <Link
-                  href="https://github.com/chenglou/pretext"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-neutral-300 underline underline-offset-2 hover:text-white transition-colors cursor-pointer outline-none rounded data-focus-visible:ring-2 data-focus-visible:ring-white/60"
-                >
-                  pretext
-                </Link>{' '}
-                for instant, DOM-free text measurement.
+                A resume builder using semantic Markdown and browser-accurate
+                page fitting.
               </p>
               <p>
                 Write markdown on the left. The preview auto-scales{' '}

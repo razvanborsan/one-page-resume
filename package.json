@@ -2,7 +2,7 @@
   "name": "one-page-resume",
   "version": "1.0.0",
   "packageManager": "bun@1.2.15",
-  "description": "A resume builder that auto-scales font size and line spacing to always fit on one page. Powered by pretext for instant, DOM-free text measurement.",
+  "description": "A Markdown resume builder that uses browser-accurate Typeset rendering to fit content on one A4 page.",
   "license": "MIT",
   "author": "Razvan Borsan",
   "repository": {
@@ -17,7 +17,7 @@
     "a4",
     "page-fit",
     "text-measurement",
-    "pretext"
+    "typeset"
   ],
   "scripts": {
     "dev": "vite",
@@ -33,12 +33,13 @@
     "validate": "bun run format:check && bun run typecheck && bun run lint && bun run test && bun run build"
   },
   "dependencies": {
-    "@chenglou/pretext": "^0.0.8",
     "@fontsource-variable/geist": "^5.2.9",
     "@fontsource-variable/geist-mono": "^5.2.8",
     "react": "^19.2.7",
     "react-aria-components": "^1.19.0",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
