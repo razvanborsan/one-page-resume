@@ -6,13 +6,17 @@ import {
   useRef,
   useState,
 } from 'react';
-import {ToggleButton, ToggleButtonGroup} from 'react-aria-components';
+import {Tab, TabList, TabPanel, TabPanels, Tabs} from 'react-aria-components';
 import type {Key} from 'react-aria-components';
 
+import {AppHeader} from './components/app_header';
+import type {SaveStatus} from './components/app_header';
 import {MarkdownEditor} from './components/markdown_editor';
 import {ResumePreview} from './components/resume_preview';
+import {SettingsDialog} from './components/settings_dialog';
 import {SettingsPanel} from './components/settings_panel';
-import {RESUMES, DEFAULT_MD} from './data/resumes';
+import {DEFAULT_MD, RESUMES} from './data/resumes';
+import {useMediaQuery} from './hooks/use_media_query';
 import {usePageFit} from './hooks/use_page_fit';
 import {PAGE_HEIGHT, PAGE_WIDTH} from './lib/page';
 import {exportPdf} from './lib/pdf';
@@ -24,6 +28,8 @@ import {
 
 const STORAGE_KEY = 'one-page-resume:markdown';
 const FIT_IDLE_DELAY = 300;
+const TWO_PANE_QUERY = '(min-width: 48rem)';
+const INLINE_SETTINGS_QUERY = '(min-width: 75rem)';
 
 function loadInitialMarkdown(): string {
   try {
@@ -36,25 +42,37 @@ function loadInitialMarkdown(): string {
   return DEFAULT_MD;
 }
 
+function getResumeName(markdown: string, index: number): string {
+  return markdown.match(/^#\s+(.+)$/m)?.[1] ?? `Example ${index + 1}`;
+}
+
 export function App() {
   const [markdown, setMarkdown] = useState(loadInitialMarkdown);
   const deferredMarkdown = useDeferredValue(markdown);
   const [settings, setSettings] = useState(DEFAULT_RESUME_SETTINGS);
   const [fontsLoaded, setFontsLoaded] = useState(false);
-  const [activeTab, setActiveTab] = useState('preview');
+  const [activeTab, setActiveTab] = useState<Key>('preview');
   const [isAdjustingLayout, setIsAdjustingLayout] = useState(false);
+  const [showMarginGuide, setShowMarginGuide] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
+  const [undoMarkdown, setUndoMarkdown] = useState<string | null>(null);
   const adjustmentTimerRef = useRef<number | null>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const isTwoPane = useMediaQuery(TWO_PANE_QUERY);
+  const hasInlineSettings = useMediaQuery(INLINE_SETTINGS_QUERY);
 
   const maxContentHeight = PAGE_HEIGHT - settings.padding * 2;
+  const previewActive = isTwoPane || activeTab === 'preview';
 
   useEffect(() => {
+    setSaveStatus('saving');
     const timeout = window.setTimeout(() => {
       try {
         localStorage.setItem(STORAGE_KEY, markdown);
+        setSaveStatus('saved');
       } catch {
-        // Ignore write failures (e.g. quota exceeded or unavailable storage).
+        setSaveStatus('unavailable');
       }
     }, 250);
 
@@ -95,7 +113,7 @@ export function App() {
     maxContentHeight,
     maxFontSize: settings.maxFontSize,
     padding: settings.padding,
-    previewActive: activeTab === 'preview',
+    previewActive,
     sectionSpacing: settings.sectionSpacing,
     separatorSpacing: settings.separatorSpacing,
     fontSize: settings.manualFontSize,
@@ -145,6 +163,15 @@ export function App() {
       separatorSpacing: settings.separatorSpacing,
     }),
     [fontSize, lineHeightMultiplier, settings],
+  );
+
+  const examples = useMemo(
+    () =>
+      RESUMES.map((resume, index) => ({
+        id: String(index),
+        label: getResumeName(resume, index),
+      })),
+    [],
   );
 
   const finishLayoutAdjustment = useCallback(() => {
@@ -227,80 +254,136 @@ export function App() {
     [finishLayoutAdjustment, fitResult.fontSize],
   );
 
-  const handleExportPdf = useCallback(() => {
-    exportPdf(pageRef.current, {pageWidth: PAGE_WIDTH, markdown});
-  }, [markdown]);
+  const handleResetSettings = useCallback(() => {
+    finishLayoutAdjustment();
+    setSettings({...DEFAULT_RESUME_SETTINGS});
+  }, [finishLayoutAdjustment]);
 
-  const handleShuffle = useCallback(() => {
-    setMarkdown(previous => {
-      const others = RESUMES.filter(resume => resume !== previous);
-      return others[Math.floor(Math.random() * others.length)];
-    });
+  const handleMarkdownChange = useCallback((value: string) => {
+    setUndoMarkdown(null);
+    setMarkdown(value);
   }, []);
 
+  const handleExampleSelect = useCallback(
+    (id: string) => {
+      const next = RESUMES[Number(id)];
+      if (next === undefined || next === markdown) return;
+      setUndoMarkdown(previous => previous ?? markdown);
+      setMarkdown(next);
+    },
+    [markdown],
+  );
+
+  const handleUndoExample = useCallback(() => {
+    if (undoMarkdown === null) return;
+    setMarkdown(undoMarkdown);
+    setUndoMarkdown(null);
+  }, [undoMarkdown]);
+
+  const handleExportPdf = useCallback(() => {
+    const print = () =>
+      exportPdf(pageRef.current, {pageWidth: PAGE_WIDTH, markdown});
+
+    if (!isTwoPane && activeTab !== 'preview') {
+      setActiveTab('preview');
+      window.requestAnimationFrame(() => window.requestAnimationFrame(print));
+      return;
+    }
+
+    print();
+  }, [activeTab, isTwoPane, markdown]);
+
+  const renderPreview = (active: boolean) => (
+    <ResumePreview
+      active={active}
+      contentRef={contentRef}
+      contentStyle={contentStyle}
+      fillPercent={fillPercent}
+      fits={fits}
+      markdown={deferredMarkdown}
+      maxContentHeight={maxContentHeight}
+      measuredHeight={fitResult.measuredHeight}
+      onShowMarginGuideChange={setShowMarginGuide}
+      pageRef={pageRef}
+      padding={settings.padding}
+      showMarginGuide={showMarginGuide}
+    />
+  );
+
+  const renderSettingsPanel = (onClose?: () => void) => (
+    <SettingsPanel
+      fillPercent={fillPercent}
+      fits={fits}
+      maxContentHeight={maxContentHeight}
+      measuredHeight={fitResult.measuredHeight}
+      onAutoFitChange={handleAutoFitChange}
+      onClose={onClose}
+      onFontSizeChange={handleFontSizeChange}
+      onLayoutChange={handleLayoutChange}
+      onLayoutChangeEnd={finishLayoutAdjustment}
+      onLineHeightChange={handleLineHeightChange}
+      onReset={handleResetSettings}
+      values={settingsPanelValues}
+    />
+  );
+
+  const settingsControl = !hasInlineSettings ? (
+    <SettingsDialog>{close => renderSettingsPanel(close)}</SettingsDialog>
+  ) : undefined;
+
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      <main className="flex-1 flex flex-col sm:flex-row bg-neutral-900 text-white min-h-0 overflow-hidden">
-        <ToggleButtonGroup
-          aria-label="Choose view"
-          selectionMode="single"
-          disallowEmptySelection
-          selectedKeys={[activeTab]}
-          onSelectionChange={(keys: Set<Key>) => {
-            const [key] = keys;
-            if (key !== undefined) setActiveTab(String(key));
-          }}
-          className="sm:hidden flex border-b border-neutral-800 shrink-0"
-        >
-          {(
-            [
-              ['editor', 'Editor'],
-              ['preview', 'Preview'],
-              ['settings', 'Settings'],
-            ] as const
-          ).map(([key, label]) => (
-            <ToggleButton
-              key={key}
-              id={key}
-              className="flex-1 py-2.5 text-xs uppercase tracking-widest transition-colors cursor-pointer text-neutral-500 data-hovered:text-neutral-300 data-selected:text-white data-selected:border-b-2 data-selected:border-white outline-none data-focus-visible:ring-1 data-focus-visible:ring-inset data-focus-visible:ring-white/60"
+    <div className="app-shell">
+      <AppHeader
+        examples={examples}
+        onExampleSelect={handleExampleSelect}
+        onExport={handleExportPdf}
+        onUndoExample={undoMarkdown !== null ? handleUndoExample : undefined}
+        saveStatus={saveStatus}
+        settingsControl={settingsControl}
+      />
+
+      <main className="workspace-shell">
+        {isTwoPane ? (
+          <div
+            className={`workspace-grid ${hasInlineSettings ? 'has-inline-settings' : ''}`}
+          >
+            <MarkdownEditor
+              markdown={markdown}
+              onChange={handleMarkdownChange}
+            />
+            {renderPreview(true)}
+            {hasInlineSettings && renderSettingsPanel()}
+          </div>
+        ) : (
+          <Tabs
+            className="mobile-workspace-tabs"
+            selectedKey={activeTab}
+            onSelectionChange={setActiveTab}
+          >
+            <TabList
+              aria-label="Choose workspace view"
+              className="mobile-tab-list"
             >
-              {label}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
-
-        <MarkdownEditor
-          active={activeTab === 'editor'}
-          markdown={markdown}
-          onChange={setMarkdown}
-        />
-
-        <ResumePreview
-          active={activeTab === 'preview'}
-          contentRef={contentRef}
-          contentStyle={contentStyle}
-          fits={fits}
-          markdown={deferredMarkdown}
-          pageRef={pageRef}
-          padding={settings.padding}
-        />
-
-        <SettingsPanel
-          active={activeTab === 'settings'}
-          fillPercent={fillPercent}
-          fits={fits}
-          maxContentHeight={maxContentHeight}
-          measuredHeight={fitResult.measuredHeight}
-          measureTime={fitResult.measureTime}
-          onAutoFitChange={handleAutoFitChange}
-          onExport={handleExportPdf}
-          onFontSizeChange={handleFontSizeChange}
-          onLayoutChange={handleLayoutChange}
-          onLayoutChangeEnd={finishLayoutAdjustment}
-          onLineHeightChange={handleLineHeightChange}
-          onShuffle={handleShuffle}
-          values={settingsPanelValues}
-        />
+              <Tab id="editor" className="mobile-tab">
+                Write
+              </Tab>
+              <Tab id="preview" className="mobile-tab">
+                Preview
+              </Tab>
+            </TabList>
+            <TabPanels className="mobile-tab-panels">
+              <TabPanel id="editor" className="mobile-tab-panel">
+                <MarkdownEditor
+                  markdown={markdown}
+                  onChange={handleMarkdownChange}
+                />
+              </TabPanel>
+              <TabPanel id="preview" className="mobile-tab-panel">
+                {renderPreview(activeTab === 'preview')}
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
+        )}
       </main>
     </div>
   );

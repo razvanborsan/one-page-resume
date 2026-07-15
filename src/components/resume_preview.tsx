@@ -1,27 +1,39 @@
 import {memo, useEffect, useRef, useState} from 'react';
 import type {CSSProperties, RefObject} from 'react';
+import {ToggleButton, Toolbar} from 'react-aria-components';
 
 import {PAGE_HEIGHT, PAGE_WIDTH} from '../lib/page';
+import {GuidesIcon} from './icons';
 import {ResumeMarkdown} from './resume_markdown';
 
 interface ResumePreviewProps {
   active: boolean;
   contentRef: RefObject<HTMLDivElement | null>;
   contentStyle: CSSProperties;
+  fillPercent: number;
   fits: boolean;
   markdown: string;
+  maxContentHeight: number;
+  measuredHeight: number;
+  onShowMarginGuideChange: (selected: boolean) => void;
   pageRef: RefObject<HTMLDivElement | null>;
   padding: number;
+  showMarginGuide: boolean;
 }
 
 export const ResumePreview = memo(function ResumePreview({
   active,
   contentRef,
   contentStyle,
+  fillPercent,
   fits,
   markdown,
+  maxContentHeight,
+  measuredHeight,
+  onShowMarginGuideChange,
   pageRef,
   padding,
+  showMarginGuide,
 }: ResumePreviewProps) {
   const previewRef = useRef<HTMLDivElement>(null);
   const [pageScale, setPageScale] = useState(1);
@@ -41,54 +53,77 @@ export const ResumePreview = memo(function ResumePreview({
   return (
     <div
       ref={previewRef}
-      className={`flex-1 min-w-0 items-center justify-center overflow-hidden p-4 sm:p-8 ${active ? 'flex' : 'hidden'} sm:flex`}
+      className={`preview-panel ${active ? 'is-active' : 'is-hidden'}`}
     >
       <div
-        ref={pageRef}
-        data-pagefit-page
-        className="resume-page relative bg-white shadow-2xl shadow-black/50 shrink-0"
+        className="page-scale-frame"
         style={{
-          width: PAGE_WIDTH,
-          height: PAGE_HEIGHT,
-          overflow: 'hidden',
-          transform: `scale(${pageScale})`,
-          transformOrigin: 'center center',
+          width: PAGE_WIDTH * pageScale,
+          height: PAGE_HEIGHT * pageScale,
         }}
       >
         <div
-          ref={contentRef}
-          data-resume-content
-          className="typeset typeset-resume w-full"
-          style={contentStyle}
-        >
-          <ResumeMarkdown>{markdown}</ResumeMarkdown>
-        </div>
-
-        <div
-          data-margin-guide
-          className="absolute pointer-events-none"
+          ref={pageRef}
+          data-pagefit-page
+          className="resume-page preview-paper"
           style={{
-            top: padding,
-            left: padding,
-            right: padding,
-            bottom: padding,
-            border: '1px dashed rgba(0,0,0,0.12)',
+            width: PAGE_WIDTH,
+            height: PAGE_HEIGHT,
+            overflow: 'hidden',
+            transform: `scale(${pageScale})`,
+            transformOrigin: 'top left',
           }}
-        />
-
-        {!fits && (
+        >
           <div
-            data-overflow
-            className="absolute bottom-0 left-0 right-0 pointer-events-none"
-            style={{
-              height: 48,
-              background:
-                'linear-gradient(transparent, rgba(248,113,113,0.18))',
-              borderBottom: '2px solid rgb(248,113,113)',
-            }}
-          />
-        )}
+            ref={contentRef}
+            data-resume-content
+            className="typeset typeset-resume w-full"
+            style={contentStyle}
+          >
+            <ResumeMarkdown>{markdown}</ResumeMarkdown>
+          </div>
+
+          {showMarginGuide && (
+            <div
+              data-margin-guide
+              className="margin-guide"
+              style={{
+                top: padding,
+                left: padding,
+                right: padding,
+                bottom: padding,
+              }}
+            />
+          )}
+
+          {!fits && <div data-overflow className="overflow-indicator" />}
+        </div>
       </div>
+
+      <Toolbar aria-label="Preview options" className="preview-toolbar">
+        <div className="preview-fit-status" data-fits={fits} role="status">
+          <span className="preview-fit-dot" />
+          <span>
+            {fits
+              ? 'Fits on 1 page'
+              : `Overflow by ${Math.max(0, measuredHeight - maxContentHeight)}px`}
+          </span>
+        </div>
+        <span className="preview-toolbar-separator" />
+        <span className="preview-fill-label">
+          {Math.round(fillPercent)}% filled
+        </span>
+        <span className="preview-toolbar-separator" />
+        <ToggleButton
+          className="guide-toggle"
+          isSelected={showMarginGuide}
+          onChange={onShowMarginGuideChange}
+          aria-label="Show margin guides"
+        >
+          <GuidesIcon />
+          <span>Guides</span>
+        </ToggleButton>
+      </Toolbar>
     </div>
   );
 });

@@ -1,11 +1,18 @@
 import {afterEach, beforeEach, describe, expect, it} from 'vitest';
-import {page} from 'vitest/browser';
+import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
 
 import {App} from './app';
 import './index.css';
 
 const STORAGE_KEY = 'one-page-resume:markdown';
+
+async function openStyleSettingsIfNeeded() {
+  const trigger = page.getByRole('button', {
+    name: 'Open resume style settings',
+  });
+  if (trigger.query()) await trigger.click();
+}
 
 describe('App resume preview', () => {
   beforeEach(() => {
@@ -110,8 +117,8 @@ describe('App resume preview', () => {
     expect(document.body.textContent).toContain('Fits on 1 page');
     expect(paper.querySelector('[data-overflow]')).toBeNull();
 
-    await page.getByText('Settings', {exact: true}).click();
-    await page.getByRole('slider', {name: 'Section Spacing'}).fill('30');
+    await openStyleSettingsIfNeeded();
+    await page.getByRole('slider', {name: 'Sections'}).fill('30');
     const section = content.querySelector<HTMLElement>('h2');
     if (!section) {
       throw new Error('The test resume needs a section heading.');
@@ -120,9 +127,56 @@ describe('App resume preview', () => {
       .poll(() => getComputedStyle(section).marginBlockStart)
       .toBe('30px');
 
-    await page.getByText('Preview', {exact: true}).click();
     await expect
       .poll(() => content.scrollHeight <= paper.clientHeight)
       .toBe(true);
+  });
+
+  it('keeps margin guides opt-in and exposes them from the preview toolbar', async () => {
+    await render(<App />);
+
+    const paper = document.querySelector<HTMLElement>('[data-pagefit-page]');
+    if (!paper) throw new Error('The resume preview did not render.');
+
+    expect(paper.querySelector('[data-margin-guide]')).toBeNull();
+    await page.getByRole('button', {name: 'Show margin guides'}).click();
+    expect(paper.querySelector('[data-margin-guide]')).not.toBeNull();
+  });
+
+  it('shows manual typography controls only when auto-fit is disabled', async () => {
+    await render(<App />);
+    await openStyleSettingsIfNeeded();
+
+    await expect
+      .element(page.getByRole('slider', {name: 'Maximum text size'}))
+      .toBeVisible();
+    expect(
+      page.getByRole('slider', {name: 'Text size', exact: true}).query(),
+    ).toBeNull();
+
+    const autoFitInput = await page.getByRole('switch').findElement();
+    const autoFitSwitch = autoFitInput.closest<HTMLElement>('.switch-control');
+    if (!autoFitSwitch) throw new Error('The auto-fit switch did not render.');
+    await userEvent.click(autoFitSwitch);
+
+    await expect
+      .element(page.getByText('Text size', {exact: true}))
+      .toBeVisible();
+    await expect
+      .element(page.getByText('Line height', {exact: true}))
+      .toBeVisible();
+  });
+
+  it('loads named examples without losing the previous document', async () => {
+    await render(<App />);
+
+    await page.getByRole('button', {name: 'Choose a resume example'}).click();
+    await page.getByRole('menuitem', {name: 'Milo Vex'}).click();
+    await expect.element(page.getByText('Undo example')).toBeVisible();
+
+    await page.getByText('Undo example').click();
+    await expect
+      .element(page.getByRole('heading', {name: 'Semantic preview'}))
+      .toBeVisible();
   });
 });
