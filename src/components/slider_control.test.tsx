@@ -1,5 +1,5 @@
 import {describe, it, expect} from 'vitest';
-import {page} from 'vitest/browser';
+import {page, userEvent} from 'vitest/browser';
 import {render} from 'vitest-browser-react';
 
 import {SliderControl} from './slider_control';
@@ -115,5 +115,29 @@ describe('SliderControl', () => {
     await page.getByRole('slider').fill('1.5');
 
     expect(reportedValue).toBe(1.5);
+  });
+
+  it('reports the committed value when the interaction ends', async () => {
+    let committedValue: number | undefined;
+    await render(
+      <SliderControl
+        label="Zoom"
+        value={1}
+        onChange={() => {}}
+        onChangeEnd={value => {
+          committedValue = value;
+        }}
+        min={0}
+        max={2}
+        step={0.5}
+      />,
+    );
+
+    const slider = page.getByRole('slider');
+    const sliderElement = await slider.findElement();
+    sliderElement.focus();
+    await userEvent.keyboard('{ArrowRight}');
+
+    expect(committedValue).toBe(1.5);
   });
 });

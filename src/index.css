@@ -16,6 +16,7 @@
   --color-border: #e5e5e5;
   --color-ring: #a3a3a3;
   --radius: 0.375rem;
+  contain: layout paint style;
   color: var(--color-foreground);
 }
 

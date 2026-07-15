@@ -13,6 +13,7 @@ export interface SliderControlProps {
   label: string;
   value: number;
   onChange: (value: number) => void;
+  onChangeEnd?: (value: number) => void;
   min: number;
   max: number;
   step: number;
@@ -25,6 +26,7 @@ export function SliderControl({
   label,
   value,
   onChange,
+  onChangeEnd,
   min,
   max,
   step,
@@ -37,6 +39,7 @@ export function SliderControl({
       aria-label={label}
       value={value}
       onChange={onChange}
+      onChangeEnd={onChangeEnd}
       minValue={min}
       maxValue={max}
       step={step}
