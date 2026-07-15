@@ -1,0 +1,89 @@
+/*
+ * Resume page content styles.
+ *
+ * These style the generated Markdown of the printable A4 page, so they live in
+ * their own stylesheet (like typeset.css) rather than as utilities on
+ * components. `.resume-page` sets the page-local design tokens that
+ * shadcn/typeset reads; `.typeset-resume` tightens the default typeset rhythm
+ * into the denser scale a one-page resume needs.
+ *
+ * Imported after typeset.css so `.typeset-resume` overrides the `.typeset`
+ * base. Kept unlayered to preserve the existing cascade.
+ */
+
+.resume-page {
+  --color-foreground: #171717;
+  --color-muted-foreground: #737373;
+  --color-muted: #f5f5f5;
+  --color-border: #e5e5e5;
+  --color-ring: #a3a3a3;
+  --radius: 0.375rem;
+  contain: layout paint style;
+  color: var(--color-foreground);
+}
+
+.typeset-resume {
+  --typeset-font-body: var(--font-geist);
+  --typeset-font-heading: var(--font-geist);
+  --typeset-font-mono: var(--font-geist-mono);
+  --typeset-size: 11px;
+  --typeset-leading: 1.5;
+  --typeset-flow: 0.65em;
+  --resume-section-spacing: 18px;
+  --resume-item-spacing: 10px;
+  --resume-separator-spacing: 16px;
+  font-size: var(--typeset-size);
+}
+
+.typeset-resume > :where(h1) {
+  font-size: 1.5em;
+  line-height: 1.2;
+}
+
+.typeset-resume > :where(h2) {
+  color: var(--typeset-muted);
+  font-size: 0.85em;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  margin-block-start: var(--resume-section-spacing);
+  text-transform: uppercase;
+}
+
+.typeset-resume > :where(h3) {
+  font-size: 1em;
+  line-height: 1.4;
+  margin-block-start: var(--resume-item-spacing);
+}
+
+.typeset-resume > :where(h2 + h3) {
+  margin-block-start: 0.4em;
+}
+
+.typeset-resume > :where(h1 + p) {
+  color: var(--typeset-muted);
+  margin-block-start: 0.35em;
+}
+
+.typeset-resume > :where(h3 + p) {
+  color: var(--typeset-muted);
+  font-size: 0.8em;
+  margin-block-start: 0.2em;
+}
+
+.typeset-resume :where(ul, ol) {
+  margin-block-start: 0.45em;
+  padding-inline-start: 1.25em;
+}
+
+.typeset-resume :where(li) {
+  margin-block-start: 0.2em;
+  padding-inline-start: 0.2em;
+}
+
+.typeset-resume > :where(hr) {
+  margin-block-start: var(--resume-separator-spacing);
+}
+
+.typeset-resume > :where(hr + *) {
+  margin-block-start: var(--resume-separator-spacing);
+}
