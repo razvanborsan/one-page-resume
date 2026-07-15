@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 
 const COMPONENTS: Components = {
   table: ({node: _node, ...props}) => (
-    <div className="typeset-scroll pagefit-scrollbar">
+    <div className="typeset-scroll app-scrollbar">
       <table {...props} />
     </div>
   ),
