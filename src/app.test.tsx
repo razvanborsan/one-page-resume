@@ -155,9 +155,9 @@ describe('App resume preview', () => {
     ).toBeNull();
 
     const autoFitInput = await page.getByRole('switch').findElement();
-    const autoFitSwitch = autoFitInput.closest<HTMLElement>('.switch-control');
-    if (!autoFitSwitch) throw new Error('The auto-fit switch did not render.');
-    await userEvent.click(autoFitSwitch);
+    await userEvent.click(
+      autoFitInput.closest<HTMLElement>('label') ?? autoFitInput,
+    );
 
     await expect
       .element(page.getByText('Text size', {exact: true}))

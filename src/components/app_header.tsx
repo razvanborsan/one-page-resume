@@ -8,6 +8,8 @@ import {
 } from 'react-aria-components';
 import type {Key, ReactNode} from 'react';
 
+import {cn} from '../lib/utils';
+import {headerButton} from './ui/button';
 import {
   ChevronDownIcon,
   DocumentIcon,
@@ -49,23 +51,32 @@ export function AppHeader({
   const handleExampleAction = (key: Key) => onExampleSelect(String(key));
 
   return (
-    <header className="app-header">
-      <div className="app-brand">
-        <span className="app-mark">
-          <DocumentIcon />
+    <header className="relative z-30 flex h-14 shrink-0 grow-0 basis-14 items-center gap-4 border-b border-app-border bg-white/84 px-5 backdrop-blur-[18px] max-md:h-13 max-md:basis-13 max-md:gap-2 max-md:px-[0.7rem]">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span className="grid size-7 shrink-0 place-items-center rounded-[0.55rem] border border-app-border bg-app-surface shadow-[0_1px_2px_oklch(0_0_0/5%)]">
+          <DocumentIcon className="size-[0.95rem]" />
         </span>
-        <span className="app-title">One Page Resume</span>
+        <span className="overflow-hidden text-sm font-[640] tracking-[-0.015em] text-ellipsis whitespace-nowrap max-[21rem]:hidden">
+          One Page Resume
+        </span>
       </div>
 
-      <div className="save-status" data-status={saveStatus} role="status">
-        <span className="save-status-dot" />
+      <div
+        className="group/save flex items-center gap-[0.4rem] whitespace-nowrap text-xs text-app-muted max-md:hidden"
+        data-status={saveStatus}
+        role="status"
+      >
+        <span className="size-1.5 rounded-full bg-app-success group-data-[status=saving]/save:bg-app-subtle group-data-[status=unavailable]/save:bg-app-danger" />
         <span>{SAVE_LABELS[saveStatus]}</span>
       </div>
 
-      <div className="app-actions">
+      <div className="ml-auto flex min-w-0 items-center gap-1.5 max-md:gap-[0.2rem]">
         {onUndoExample && (
           <Button
-            className="header-button header-button-quiet undo-example-button"
+            className={cn(
+              headerButton({variant: 'quiet'}),
+              'max-md:px-[0.55rem] max-[26rem]:absolute max-[26rem]:top-[calc(100%+0.5rem)] max-[26rem]:right-[0.7rem] max-[26rem]:border-app-border max-[26rem]:bg-white max-[26rem]:px-[0.65rem] max-[26rem]:shadow-[0_8px_24px_oklch(0_0_0/12%)]',
+            )}
             onPress={onUndoExample}
           >
             Undo example
@@ -74,28 +85,31 @@ export function AppHeader({
 
         <MenuTrigger>
           <Button
-            className="header-button header-button-quiet"
+            className={cn(
+              headerButton({variant: 'quiet'}),
+              'max-md:w-8 max-md:p-0',
+            )}
             aria-label="Choose a resume example"
           >
-            <ExamplesIcon className="button-icon examples-icon" />
-            <span className="header-action-label">Examples</span>
-            <ChevronDownIcon className="button-icon button-icon-small" />
+            <ExamplesIcon className="size-[0.95rem]" />
+            <span className="max-md:hidden">Examples</span>
+            <ChevronDownIcon className="size-3 max-md:hidden" />
           </Button>
           <Popover
-            className="example-popover"
+            className="max-h-[min(26rem,var(--available-height))] min-w-52 overflow-auto rounded-[0.8rem] border border-white/10 bg-panel-raised p-[0.35rem] text-ink-96 shadow-[0_18px_50px_oklch(0_0_0/24%)] outline-none backdrop-blur-[20px] entering:animate-[popover-in_120ms_ease-out]"
             placement="bottom end"
             offset={8}
           >
             <Menu
               aria-label="Resume examples"
-              className="example-menu"
+              className="outline-none"
               onAction={handleExampleAction}
             >
               {examples.map(example => (
                 <MenuItem
                   id={example.id}
                   key={example.id}
-                  className="example-menu-item"
+                  className="cursor-default rounded-[0.55rem] px-[0.65rem] py-[0.55rem] text-[0.8rem] font-[540] text-ink-78 outline-none focused:bg-white/10 focused:text-white hovered:bg-white/10 hovered:text-white"
                 >
                   {example.label}
                 </MenuItem>
@@ -109,19 +123,22 @@ export function AppHeader({
           target="_blank"
           rel="noopener noreferrer"
           aria-label="View source on GitHub"
-          className="header-icon-button github-action"
+          className={cn(headerButton({variant: 'icon'}), 'max-md:hidden')}
         >
-          <GithubIcon />
+          <GithubIcon className="size-[0.95rem]" />
         </Link>
 
         {settingsControl}
 
         <Button
-          className="header-button header-button-primary"
+          className={cn(
+            headerButton({variant: 'primary'}),
+            'max-md:w-8 max-md:p-0',
+          )}
           onPress={onExport}
         >
-          <DownloadIcon className="button-icon" />
-          <span className="export-label">Export PDF</span>
+          <DownloadIcon className="size-[0.95rem]" />
+          <span className="max-md:hidden">Export PDF</span>
         </Button>
       </div>
     </header>

@@ -25,11 +25,16 @@ import {
   DEFAULT_RESUME_SETTINGS,
   type LayoutSettingKey,
 } from './lib/resume_settings';
+import {cn} from './lib/utils';
 
 const STORAGE_KEY = 'one-page-resume:markdown';
 const FIT_IDLE_DELAY = 300;
 const TWO_PANE_QUERY = '(min-width: 48rem)';
 const INLINE_SETTINGS_QUERY = '(min-width: 75rem)';
+
+const MOBILE_TAB_CLASS =
+  'grid h-8 cursor-pointer place-items-center rounded-[0.55rem] text-xs font-[580] text-app-muted outline-none selected:bg-white selected:text-app-foreground selected:shadow-[0_1px_3px_oklch(0_0_0/8%)] focus-visible:shadow-[0_0_0_2px_var(--app-surface),0_0_0_4px_var(--app-ring)]';
+const MOBILE_TAB_PANEL_CLASS = 'flex h-full w-full min-h-0 flex-1 outline-none';
 
 function loadInitialMarkdown(): string {
   try {
@@ -332,7 +337,7 @@ export function App() {
   ) : undefined;
 
   return (
-    <div className="app-shell">
+    <div className="flex h-svh w-full min-h-0 flex-col overflow-hidden [background:var(--app-shell-bg)]">
       <AppHeader
         examples={examples}
         onExampleSelect={handleExampleSelect}
@@ -342,10 +347,15 @@ export function App() {
         settingsControl={settingsControl}
       />
 
-      <main className="workspace-shell">
+      <main className="min-h-0 flex-1 p-[clamp(0.75rem,1.7vw,1.5rem)] max-md:p-[0.6rem]">
         {isTwoPane ? (
           <div
-            className={`workspace-grid ${hasInlineSettings ? 'has-inline-settings' : ''}`}
+            className={cn(
+              'grid h-full w-full min-h-0 gap-[clamp(0.75rem,1.5vw,1.5rem)]',
+              hasInlineSettings
+                ? 'grid-cols-[minmax(23rem,0.82fr)_minmax(30rem,1.25fr)_16rem]'
+                : 'grid-cols-[minmax(21rem,0.85fr)_minmax(0,1.15fr)]',
+            )}
           >
             <MarkdownEditor
               markdown={markdown}
@@ -356,29 +366,29 @@ export function App() {
           </div>
         ) : (
           <Tabs
-            className="mobile-workspace-tabs"
+            className="flex h-full w-full min-h-0 flex-col"
             selectedKey={activeTab}
             onSelectionChange={setActiveTab}
           >
             <TabList
               aria-label="Choose workspace view"
-              className="mobile-tab-list"
+              className="mb-[0.6rem] grid shrink-0 grow-0 grid-cols-2 gap-1 rounded-xl border border-app-border bg-white/72 p-[0.2rem]"
             >
-              <Tab id="editor" className="mobile-tab">
+              <Tab id="editor" className={MOBILE_TAB_CLASS}>
                 Write
               </Tab>
-              <Tab id="preview" className="mobile-tab">
+              <Tab id="preview" className={MOBILE_TAB_CLASS}>
                 Preview
               </Tab>
             </TabList>
-            <TabPanels className="mobile-tab-panels">
-              <TabPanel id="editor" className="mobile-tab-panel">
+            <TabPanels className="flex w-full min-h-0 flex-1 overflow-hidden">
+              <TabPanel id="editor" className={MOBILE_TAB_PANEL_CLASS}>
                 <MarkdownEditor
                   markdown={markdown}
                   onChange={handleMarkdownChange}
                 />
               </TabPanel>
-              <TabPanel id="preview" className="mobile-tab-panel">
+              <TabPanel id="preview" className={MOBILE_TAB_PANEL_CLASS}>
                 {renderPreview(activeTab === 'preview')}
               </TabPanel>
             </TabPanels>
